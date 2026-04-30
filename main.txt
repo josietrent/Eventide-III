@@ -3,15 +3,22 @@ DEFINE OBJECT SANNY BUILDER 4.1.0
 DEFINE OBJECT INDHELIX_BARRIER         // Object number -1
 DEFINE OBJECT LOD_LAND014              // Object number -2
 
-DEFINE MISSIONS 6
-DEFINE MISSION 0 AT @INIT
-DEFINE MISSION 1 AT @Car
-DEFINE MISSION 2 AT @Gun
-DEFINE MISSION 3 AT @Alley
-DEFINE MISSION 4 AT @Pest
-DEFINE MISSION 5 AT @Circuit
+DEFINE MISSIONS 0
+
+// DEFINE MISSION {ID} 0 AT {LABEL} @mission
+// DEFINE MISSION 0 AT @INIT
+// DEFINE MISSION 1 AT @Car
+// DEFINE MISSION 2 AT @Gun
+// DEFINE MISSION 3 AT @Alley
+// DEFINE MISSION 4 AT @Pest
+// DEFINE MISSION 5 AT @Circuit
 
 {$USE CLEO}
+
+var
+    $player1: Player
+    $scplayer: Char
+end
 
 Alloc($TIMER, 4310)
 Alloc($Banshee, 4315)
@@ -83,163 +90,69 @@ Alloc($Packages, 4399)
 Alloc($myCar, 4400)
 
 //-------------MAIN---------------
-script_name 'MAIN'
-main()
+Game.SetMaxWantedLevel(3)
+set_deatharrest_state 0
+Clock.SetTimeOfDay(12, 0)
+$player1 = Player.Create(0, 1130.71, 1285.37, 126.81)
+Player.SetCoordinates($player1, 1130.71, 1285.37, 126.81)
+Player.SetHeading($player1, 180.0)
+$scplayer = Player.GetChar($player1)
+Camera.SetBehindPlayer
+// Sunshine! ?? :D
+Weather.ForceNow(WeatherType.Sunny)
+Stat.SetCommercialPassed
 
-// FIXME: Refactor this into a fn, help the user when they die (the first time)
-:Wasted
-script_name 'Wasted'
+// Set player skin
+Char.Undress($scplayer, 'PLAYER')
+Char.Dress($scplayer)
 
-:Wasted_10
-wait 0
-if and
-  $never_wasted == 1
-  $never_busted == 1
-then
-    terminate_this_script
-else
-    goto @Wasted_42
+// Initialize all the things!
+// FIXME: initCars() This makes the map unstable and the player falls through the map and into the ocean
+initBlips()
+initHiddenPkgs()
+initPickups()
+initGarages()
+
+// Setup spawn points
+Restart.AddHospital(1147.25, -597.0, 14.98, 260)
+Restart.AddHospital(-1269.61, 1573.89, 72.28, 0)
+Restart.AddHospital(-280.63, 1331.00, 112.38, 180)
+Restart.AddHospital(-1269.625, 1576.8125, 71.1875, 180.0)
+Restart.AddPolice(-148.00, 1285.68, 112.63, 90.0)
+Restart.AddHospital(532.9375, 1235.8125, 130.6875, 73.0)
+Restart.AddPolice(568.8125, 1226.3125, 130.6875, 73.0)
+Restart.AddHospital(1343.0625, 1462.375, 125.75, -90.0)
+Restart.AddPolice(1416.3125, 1655.1875, 126.8125, 0)
+
+Path.SwitchRoadsOff(1340.00, -200.00, 40.0, 1430.00, -300.00, 50.0)
+Path.SwitchRoadsOff(268.69, 14.26, 16.22, 335.26, -36.89, 16.22)
+Path.SwitchPedRoadsOff(846.00, -294.00, 5.00, 900.00, -310, 10.00)
+Path.SwitchRoadsOff(1604.375, 1593.8125, 85.5625, 1770.625, 1871.375, 185.5625)
+Path.SwitchRoadsOff(1138.1875, 1735.875, 85.5625, 1604.375, 1871.375, 185.5625)
+
+// NOTE: Assume player is alive and not arrested
+Hud.LoadSplash('SPLASH3')
+// Load Upstate Liberty and put the player in downtown Gostburg
+Streaming.LoadCollision(LevelName.Suburban)
+while not Streaming.IsCollisionInMemory(LevelName.Suburban)
+  // Wait for the collision stuff to load
+  wait 250
 end
+wait 50
 
-:Wasted_42
-wait 0
-if
-    Player.IsPlaying($player1)
-then
-    if
-       Pickup.HasBeenCollected($WastedInfo)
-    then
-        if
-            $onmission == 0
-        then
-            if
-                $DeathHelp == 0
-            then
-                goto @Wasted_134
-            else
-                goto @Wasted_573
-            end
-        else
-            goto @Wasted_111
-        end
-    else
-        goto @Wasted_111
-    end
-else
-    goto @Wasted_112
-end
-
-:Wasted_111
-goto @Wasted_10
-
-:Wasted_112
-wait 0
-if
-    not Player.IsPlaying($player1)
-then
-    start_new_script @Wasted
-    terminate_this_script
-else
-    goto @Wasted_42
-end
-
-:Wasted_134
-$DeathHelp = 1
-Player.SetControl($player1, False)
-Camera.DoFade(1500, Fade.Out)
-wait 1500
-Camera.SetFixedPosition(1116.83, -590.72, 25.27, 0.0, 0.0, 0.0)
-Camera.PointAtPoint(1130.80, -590.75, 23.01, SwitchType.JumpCut)
-Camera.DoFade(1500, Fade.In)
-wait 1500
-Text.PrintHelpString("When you die, you'll end up back here.")
-wait 3000
-Text.PrintHelpString("You'll lose a bit of cash, but at least you're still alive!")
-wait 3000
-Hud.FlashObject(HudObject.Health)
-Text.PrintHelpString("This is your health. Make sure to keep tabs on it.")
-Hud.FlashObject(0)
-wait 5000
-Camera.SetFixedPosition(1405.12, -390.75, 49.97, 0.0, 0.0, 0.0)
-Camera.PointAtPoint(1400.00, -390.75, 50.0, SwitchType.JumpCut)
-Text.PrintHelpString("if you spend some time looking around, you'll find health pickups like these. Cherish them, as they are few and far-between.")
-wait 5000
-Camera.DoFade(1500, Fade.Out)
-wait 1500
-Camera.RestoreJumpcut
-Camera.DoFade(1500, Fade.In)
-wait 1500
-wait 1000
+// We're done! Show the game to the user
+Camera.DoFade(1000, Fade.In)
 Player.SetControl($player1, True)
-wait 3000
-goto @Wasted_573
+Weather.Release
 
-:Wasted_573
-wait 0
-if
-    Player.CanStartMission($player1)
-then
-    goto @Wasted_666
-else
-    Player.SetControl($player1, True)
-    wait 500
-    goto @Wasted_573
-end
-
-:Wasted_666
-terminate_this_script
-
-function monitorShortcut_B_printCoords()
-  while true
-    script_name 'Coord'
-    wait 0
-    if and
-        Player.IsPlaying($player1)
-        Pad.IsKeyPressed(KeyCode.B)
-    then
-        Char.GetCoordinates($scplayer, $x, $y, $z)
-        wait 0
-        Text.PrintHelpFormatted("Current Coordinates: ~n~%.2f ~n~%.2f ~n~%.2f", float:$x, float:$y, float:$z)
-        wait 5000
-
-        Text.ClearHelp()
-    else
-        continue
-    end
-  end
-end
-
-// FIXME: Refactor this into a fn, keep the game going after you finish all missions
-:Loop
-script_name 'Loop'
-
-:Loop_10
-wait 0
-if
-    Player.IsPlaying($player1)
-then
-    goto @Loop_20
-else
-    goto @Loop_666
-end
-
-:Loop_20
 while true
-    Player.IsPlaying($player1)
-    wait 250
-    goto @Loop_10
+    wait 250 ms
 end
 
-:Loop_666
-wait 0
-if
-    not Player.IsPlaying($player1)
-then
-    start_new_script @Loop
-    terminate_this_script
-else
-    goto @Loop_666
-end
+// FIXME: Eveything below...
+
+/*
+// --- A bunch o' shit ---
 
 //-------Mission Scripts-------
 
@@ -2439,7 +2352,7 @@ wait 0
         if
             Char.LocateOnFoot2D($Kat, 1525.25, 1107.14, 0.5, 0.5, False)
         then
-            goto @Circuit_120
+            goto @Circuit_Pass
         end
     else
         if
@@ -2457,7 +2370,7 @@ wait 0
                     Char.IsDead($Kat)
                 then
                     Text.PrintString("Oh shit, she's dead?!", 5000)
-                    goto @Circuit_115
+                    goto @Circuit_Fail
                 else
                     continue
                 end
@@ -2522,63 +2435,36 @@ while not Player.LocateAnyMeans2D($player1, 1525.30, 1112.63, 5.0, 5.0, True)
         continue
     end
 end
+*/
 
-function main()
-  script_name 'MAIN'
-  Game.SetMaxWantedLevel(2)
-  set_deatharrest_state 0
-  Audio.SetMusicDoesFade(True)
-  Camera.SetFadingColor(0, 0, 0)
-  Camera.DoFade(0, Fade.Out)
-  Clock.SetTimeOfDay(15, 0)
-  Streaming.LoadCollision(LevelName.Suburban)
-  $player1 = Player.Create(0, 1130.71, 1285.37, 126.81)
-  Player.SetHeading($player1, 90.0)
-  $scplayer = Player.GetChar($player1)
-  Camera.SetBehindPlayer
-  $onmission = 0
-  Weather.ForceNow(WeatherType.Sunny)
-  Stat.SetProgressTotal(125)
-  Char.Undress($scplayer, 'PLAYER')
-  Char.Dress($scplayer)
-  wait 500
-  declare_mission_flag $onmission
+// ------ Functions: fancy function declarations ------
 
-  //
-  Path.SwitchRoadsOff(1340.00, -200.00, 40.0, 1430.00, -300.00, 50.0)
-  Path.SwitchRoadsOff(268.69, 14.26, 16.22, 335.26, -36.89, 16.22)
-  Path.SwitchPedRoadsOff(846.00, -294.00, 5.00, 900.00, -310, 10.00)
-  Path.SwitchRoadsOff(1604.375, 1593.8125, 85.5625, 1770.625, 1871.375, 185.5625)
-  Path.SwitchRoadsOff(1138.1875, 1735.875, 85.5625, 1604.375, 1871.375, 185.5625)
-  wait 500
-
-  initCars()
-  initBlips()
-  initHiddenPkgs()
-  initPickups()
-  initGarages()
-  initSpawnParams()
+function initBlips()
+  $Ammunation = Blip.AddSpriteForCoord(-1374.01, 1531.16, 72.28, RadarSprite.Weapon)
+  $Ammunation2 = Blip.AddSpriteForCoord(554.79, 1327.83, 132.00, RadarSprite.Weapon)
+  $Ammunation3 = Blip.AddSpriteForCoord(348.00, -716.00, 26.00, RadarSprite.Weapon)
+  $Ammunation4 = Blip.AddSpriteForCoord(1583.31, 1365.63, 134.81, RadarSprite.Weapon)
+  Blip.AddSpriteForCoord(1571.78, 1274.35, 121.83, RadarSprite.Salvatore, $SewerBlip)
 end
 
 function initCars()
-  wait 500
-  $CopCar = CarGenerator.Create(1140.24, -685.34, 14.56, 180.0, #POLICE, -1, -1, False, 25, 10, 0, 10000)
-  $AmbulanceCOM = CarGenerator.Create(220.79, -42.47, 15.95, 0, #AMBULAN, -1, -1, False, 15, 5, 0, 10000)
-  $AmbulanceIND = CarGenerator.Create(1130.20, -595.24, 14.49, 0, #AMBULAN, -1, -1, False, 15, 5, 0, 10000)
-  $AmbulanceRES = CarGenerator.Create(537.00, 1236.49, 131.77, 180, #AMBULAN, -1, -1, False, 15, 5, 0, 10000)
-  $AmbulanceRES2 = CarGenerator.Create(1332.70, 1494.50, 126.81, 270, #AMBULAN, -1, -1, False, 15, 5, 0, 10000)
-  $BansheeGen = CarGenerator.Create(1220.78, -128.20, 14.72, 260, #BANSHEE, 0, 0, False, 50, 30, 0, 10000)
-  $BobcatGen = CarGenerator.Create(874.06, -983.58, 5.12, 90.0, #BOBCAT, 46, 46, False, 10, 15, 0, 10000)
-  $CheetahGen = CarGenerator.Create(1243.45, -129.20, 14.63, 0, #CHEETAH, 25, 25, False, 15, 40, 0, 10000)
-  $KurumaGen = CarGenerator.Create(-1835.87, 1657.37, 96.44, 290, #KURUMA, 58, 1, False, 20, 25, 0, 10000)
-  $MafiaGen = CarGenerator.Create(1403.76, -175.07, 50.00, 90.0, #MAFIA, -1, -1, False, 25, 40, 0, 10000)
-  $StingerGen = CarGenerator.Create(1350.40, 1662.73, 131.81, 90, #STINGER, 40, 12, False, 40, 15, 0, 10000)
-  $SentinelGen = CarGenerator.Create(1326.36, 1662.73, 131.81, 90, #SENTINEL, 25, 25, False, 65, 45, 0, 10000)
-  $Canyonero = CarGenerator.Create(1349.29, 1662.28, 127.06, 110, #LANDSTAL, 3, 3, False, 25, 15, 0, 10000)
+  $CopCar = CarGenerator.Create(1140.24, -685.34, 14.56, 180.0, #POLICE, -1, -1, True, 25, 10, 0, 10000)
+  $AmbulanceCOM = CarGenerator.Create(220.79, -42.47, 15.95, 0, #AMBULAN, -1, -1, True, 15, 5, 0, 10000)
+  $AmbulanceIND = CarGenerator.Create(1130.20, -595.24, 14.49, 0, #AMBULAN, -1, -1, True, 15, 5, 0, 10000)
+  $AmbulanceRES = CarGenerator.Create(537.00, 1236.49, 131.77, 180, #AMBULAN, -1, -1, True, 15, 5, 0, 10000)
+  $AmbulanceRES2 = CarGenerator.Create(1332.70, 1494.50, 126.81, 270, #AMBULAN, -1, -1, True, 15, 5, 0, 10000)
+  $BansheeGen = CarGenerator.Create(1220.78, -128.20, 14.72, 260, #BANSHEE, 0, 0, True, 50, 30, 0, 10000)
+  $BobcatGen = CarGenerator.Create(874.06, -983.58, 5.12, 90.0, #BOBCAT, 46, 46, True, 10, 15, 0, 10000)
+  $CheetahGen = CarGenerator.Create(1243.45, -129.20, 14.63, 0, #CHEETAH, 25, 25, True, 15, 40, 0, 10000)
+  $KurumaGen = CarGenerator.Create(-1835.87, 1657.37, 96.44, 290, #KURUMA, 58, 1, True, 20, 25, 0, 10000)
+  $MafiaGen = CarGenerator.Create(1403.76, -175.07, 50.00, 90.0, #MAFIA, -1, -1, True, 25, 40, 0, 10000)
+  $StingerGen = CarGenerator.Create(1350.40, 1662.73, 131.81, 90, #STINGER, 40, 12, True, 40, 15, 0, 10000)
+  $SentinelGen = CarGenerator.Create(1326.36, 1662.73, 131.81, 90, #SENTINEL, 25, 25, True, 65, 45, 0, 10000)
+  $Canyonero = CarGenerator.Create(1349.29, 1662.28, 127.06, 110, #LANDSTAL, 3, 3, True, 25, 15, 0, 10000)
 
-  $gen_car6 = CarGenerator.Create(1337.75, 1671.81, 127.56, 180, #INFERNUS, -1, -1, False, 15, 30, 0, 10000)
-  $gen_car7 = CarGenerator.Create(478.84, 1278.70, 131.80, 180, #LANDSTAL, -1, -1, False, 45, 60, 0, 10000)
-  $gen_car8 = CarGenerator.Create(547.98, 1459.70, 136.94, 90, #LANDSTAL, -1, -1, False, 0, 0, 0, 10000)
+  $gen_car6 = CarGenerator.Create(1337.75, 1671.81, 127.56, 180, #INFERNUS, -1, -1, True, 15, 30, 0, 10000)
+  $gen_car7 = CarGenerator.Create(478.84, 1278.70, 131.80, 180, #LANDSTAL, -1, -1, True, 45, 60, 0, 10000)
+  $gen_car8 = CarGenerator.Create(547.98, 1459.70, 136.94, 90, #LANDSTAL, -1, -1, True, 0, 0, 0, 10000)
 
   CarGenerator.Switch($CopCar, 0)
   CarGenerator.Switch($AmbulanceIND, 0)
@@ -2593,14 +2479,6 @@ function initCars()
   CarGenerator.Switch($StingerGen, 0)
   CarGenerator.Switch($SentinelGen, 0)
   CarGenerator.Switch($Canyonero, 0)
-end
-
-function initBlips()
-  $Ammunation = Blip.AddSpriteForCoord(-1374.01, 1531.16, 72.28, RadarSprite.Weapon)
-  $Ammunation2 = Blip.AddSpriteForCoord(554.79, 1327.83, 132.00, RadarSprite.Weapon)
-  $Ammunation3 = Blip.AddSpriteForCoord(348.00, -716.00, 26.00, RadarSprite.Weapon)
-  $Ammunation4 = Blip.AddSpriteForCoord(1583.31, 1365.63, 134.81, RadarSprite.Weapon)
-  Blip.AddSpriteForCoord(1571.78, 1274.35, 121.83, RadarSprite.Salvatore, $SewerBlip)
 end
 
 function initHiddenPkgs()
@@ -2872,56 +2750,6 @@ function initSpawnParams()
   Zone.SetGroup('GTHOSP', DayOrNight.Night, 18)
 end
 
-/*
-function trySetupRestartPoints()
-  wait 0
-  if
-    not Player.IsPlaying($player1)
-  then
-    wait 500
-    return setupRestartPts()
-  end
-end
-
-function setupRestartPts()
-  wait 0
-  if
-      Player.IsPlaying($player1) // Player is alive and not arrested
-  then
-      if
-          // Ensure Upstate Liberty is loaded
-          Streaming.IsCollisionInMemory(LevelName.Suburban)
-      then
-          Hud.LoadSplash('SPLASH3')
-          Restart.AddHospital(1147.25, -597.0, 14.98, 260)
-          Restart.AddHospital(-1269.61, 1573.89, 72.28, 0)
-          Restart.AddHospital(-280.63, 1331.00, 112.38, 180)
-          Restart.AddHospital(-1269.625, 1576.8125, 71.1875, 180.0)
-          Restart.AddPolice(-148.00, 1285.68, 112.63, 90.0)
-          Restart.AddHospital(532.9375, 1235.8125, 130.6875, 73.0)
-          Restart.AddPolice(568.8125, 1226.3125, 130.6875, 73.0)
-          Restart.AddHospital(1343.0625, 1462.375, 125.75, -90.0)
-          Restart.AddPolice(1416.3125, 1655.1875, 126.8125, 0)
-          Player.SetCoordinates($player1, 1130.71, 1285.37, 126.81)
-          Mission.LoadAndLaunchInternal(0)
-          // start_new_script @Keys
-          monitorShortcutKey_P()
-          // start_new_script @Coord
-          monitorShortcut_B_printCoords()
-          // start_new_script @Wang
-          monitorWangPickup()
-          terminate_this_script
-      else
-          // Wait and then try to setup restart pts again
-          wait 50
-          return setupRestartPts()
-      end
-  else
-      return trySetupRestartPoints()
-  end
-end
-*/
-
 function monitorWangPickup(): int
   while true
     wait 0
@@ -2971,3 +2799,26 @@ function monitorShortcutKey_P()
   wait 500
   goto @Keys_10
 end
+
+function monitorShortcut_B_printCoords()
+  while true
+    script_name 'Coord'
+    wait 0
+    if and
+        Player.IsPlaying($player1)
+        Pad.IsKeyPressed(KeyCode.B)
+    then
+        Char.GetCoordinates($scplayer, $x, $y, $z)
+        wait 0
+        Text.PrintHelpFormatted("Current Coordinates: ~n~%.2f ~n~%.2f ~n~%.2f", float:$x, float:$y, float:$z)
+        wait 5000
+
+        Text.ClearHelp()
+    else
+        continue
+    end
+  end
+end
+*/
+
+// What are you doing down here? ??
