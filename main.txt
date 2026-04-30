@@ -89,6 +89,17 @@ Alloc($BRIBE_RES8, 4380)
 Alloc($Packages, 4399)
 Alloc($myCar, 4400)
 
+$willPromptTeleport = True
+$OnCarMission = False
+$OnGunMission = False
+$CarMissionDone = False
+$IntroPassed = False
+$neverWasted = False
+$neverBusted = False
+$SafeAndSound = False
+$SightseeingTour = False
+$TIMER = 10000
+
 //-------------MAIN---------------
 Game.SetMaxWantedLevel(3)
 set_deatharrest_state 0
@@ -153,6 +164,15 @@ while true
 
   monitorWangPickup()
 
+  // Prompt the user to teleport
+  if and
+    $willPromptTeleport == True
+    Player.LocateAnyMeans3D($player1, 1172.41, -104.52, 7.47, 1.0, 1.0, 1.0, True)
+  then
+    Text.PrintHelpString("Press the T Key to teleport.")
+    $willPromptTeleport = False
+  end
+
   //=========================
   // Check keyboard shortcuts
   //=========================
@@ -161,6 +181,8 @@ while true
   monitorShortcutKey_B()
   // P: Quickly open the save screen
   monitorShortcutKey_P()
+  // T: Teleportation! 🧝‍♂️
+  monitorShortcutKey_P_teleport()
 end
 
 function monitorShortcutKey_P_teleport()
