@@ -16,8 +16,8 @@ DEFINE MISSIONS 0
 {$USE CLEO}
 
 var
-    $player1: Player
-    $scplayer: Char
+  $player1: Player
+  $scplayer: Char
 end
 
 Alloc($TIMER, 4310)
@@ -134,19 +134,33 @@ Path.SwitchRoadsOff(1138.1875, 1735.875, 85.5625, 1604.375, 1871.375, 185.5625)
 Hud.LoadSplash('SPLASH3')
 // Load Upstate Liberty and put the player in downtown Gostburg
 Streaming.LoadCollision(LevelName.Suburban)
+// Wait for the collision stuff to load
 while not Streaming.IsCollisionInMemory(LevelName.Suburban)
-  // Wait for the collision stuff to load
   wait 250
 end
-wait 50
+// Wait for the map to fade-in
+wait 1500
 
 // We're done! Show the game to the user
 Camera.DoFade(1000, Fade.In)
 Player.SetControl($player1, True)
 Weather.Release
 
+// Main loop. See https://www.youtube.com/watch?v=9lPLIiBgfeE
 while true
-    wait 250 ms
+  script_name 'Main'
+  wait 250 ms
+
+  monitorWangPickup()
+
+  //=========================
+  // Check keyboard shortcuts
+  //=========================
+  // FIXME: Why don't these shortcuts work? Pressing B or P in-game does nada
+  // B: Print the current player coordinates
+  monitorShortcutKey_B()
+  // P: Quickly open the save screen
+  monitorShortcutKey_P()
 end
 
 // FIXME: Eveything below...
@@ -2750,75 +2764,48 @@ function initSpawnParams()
   Zone.SetGroup('GTHOSP', DayOrNight.Night, 18)
 end
 
-function monitorWangPickup(): int
-  while true
-    wait 0
-    script_name 'Wang'
+function monitorWangPickup()
+  wait 0
+  script_name 'Wang'
 
-    if
-        Pickup.HasBeenCollected($WangHealth)
-    then
-        Text.PrintHelpString("You found the office's first aid kit!")
-        break
-    else
-        continue
-    end
+  if
+    Pickup.HasBeenCollected($WangHealth)
+  then
+    Text.PrintHelpString("You found the office's first aid kit!")
   end
 end
 
 function monitorShortcutKey_P()
-  :Keys
-  script_name 'Keys'
+  if
+    Pad.IsKeyPressed(KeyCode.P)
+  then
+    Game.ActivateSaveMenu()
 
-  :Keys_10
-  while not Pad.IsKeyPressed(KeyCode.P)
-      wait 0
+    // QUESTION: Do we have to wait for anything? Or will control flow return here after the user saves their game?
+    // The user saved their game, so wait for the save procedure to finish
+    while not Game.HasSaveGameFinished()
+      wait 10
       if
-          Pad.IsKeyPressed(KeyCode.P)
+        Game.HasSaveGameFinished()
       then
-          Game.ActivateSaveMenu()
-          break
-      else
-          continue
+        break
       end
-  end
-
-  :Keys_20
-  while not Game.HasSaveGameFinished()
-      wait 0
-      if
-          Game.HasSaveGameFinished()
-      then
-          break
-      else
-          continue
-      end
-  end
-
-  :Keys_30
-  wait 500
-  goto @Keys_10
-end
-
-function monitorShortcut_B_printCoords()
-  while true
-    script_name 'Coord'
-    wait 0
-    if and
-        Player.IsPlaying($player1)
-        Pad.IsKeyPressed(KeyCode.B)
-    then
-        Char.GetCoordinates($scplayer, $x, $y, $z)
-        wait 0
-        Text.PrintHelpFormatted("Current Coordinates: ~n~%.2f ~n~%.2f ~n~%.2f", float:$x, float:$y, float:$z)
-        wait 5000
-
-        Text.ClearHelp()
-    else
-        continue
     end
   end
 end
-*/
+
+function monitorShortcutKey_B()
+  if and
+    Player.IsPlaying($player1)
+    Pad.IsKeyPressed(KeyCode.B)
+  then
+    Char.GetCoordinates($scplayer, $x, $y, $z)
+    wait 0
+    Text.PrintHelpFormatted("Current Coordinates: ~n~%.2f ~n~%.2f ~n~%.2f", float:$x, float:$y, float:$z)
+    wait 5000
+
+    Text.ClearHelp()
+  end
+end
 
 // What are you doing down here? ??
